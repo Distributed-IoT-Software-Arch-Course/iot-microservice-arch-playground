@@ -11,11 +11,11 @@ WORKDIR /app
 RUN pip3 install -r requirements.txt
 
 # Exposed Port of the API Server
-EXPOSE 7070
+EXPOSE 7071
 
 # Python Container Application Configurations
 ENV PYTHONPATH "/app/"
 ENV PYTHONUNBUFFERED 1
 
 # Run the target application
-CMD [ "python3", "api_server.py" ]
+CMD [ "python3", "web_server_process.py" ]

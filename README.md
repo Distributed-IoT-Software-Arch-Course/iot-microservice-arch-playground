@@ -2,7 +2,28 @@
 
 The target use case demo and deployment with Docker will be the following: 
 
-<img title="a title" alt="Alt text" src="images/scenario_image.jpg">
+![scenario_image.jpg](images/scenario_image.jpg)
+
+## Create a Docker Network
+
+Create a Docker network to allow the containers to communicate with each other:
+
+```bash
+  docker network create iot_network
+``` 
+
+Listing the networks:
+
+```bash
+  docker network ls
+```
+
+All the containers will be connected to this network to allow communication between them.
+In order to connect a container to a network, you can use the following parameter `--network iot_network` at the run time:
+
+```bash
+  docker run --name=<container_name> --network iot_network <other_options> <image_name>
+```
 
 ## MQTT Broker - Eclipse Mosquitto
 
@@ -10,14 +31,15 @@ This section provides a guide for setting up and customizing an MQTT broker usin
 We use the official eclipse-mosquitto Docker image, and the version for this example is 2.0.12.
 
 ### Customization
+
 We customize our MQTT broker at runtime with the following configurations:
 
-- Local mosquitto.conf file: -v <LOCAL_PATH>/mosquitto.conf:/mosquitto/config/mosquitto.conf
-- Local data folder for persistence: -v <LOCAL_PATH>/data:/mosquitto/data
-- Local log folder for easy access: -v <LOCAL_PATH>/log:/mosquitto/log
-- Port mapping: -p 1883:1883
-- Restart always: --restart always
-- Daemon mode: -d
+- Local `mosquitto.conf` file: `-v <LOCAL_PATH>/mosquitto.conf:/mosquitto/config/mosquitto.conf`
+- Local `data` folder for persistence: `-v <LOCAL_PATH>/data:/mosquitto/data`
+- Local `log` folder for easy access: `-v <LOCAL_PATH>/log:/mosquitto/log`
+- Port mapping: `-p 1883:1883`
+- Restart always: `--restart always`
+- Daemon mode: `-d`
 
 ### Run Command
 
@@ -30,13 +52,13 @@ cd mqtt-broker
 Run the container
 
 ```bash
-docker run --name=my-mosquitto-broker -p 1883:1883 -v <LOCAL_PATH>/mosquitto.conf:/mosquitto/config/mosquitto.conf -v <LOCAL_PATH>/data:/mosquitto/data -v <LOCAL_PATH>/log:/mosquitto/log --restart always -d eclipse-mosquitto:2.0.12
+docker run --name=my-mosquitto-broker --network iot_network -p 1883:1883 -v <LOCAL_PATH>/mosquitto.conf:/mosquitto/config/mosquitto.conf -v <LOCAL_PATH>/data:/mosquitto/data -v <LOCAL_PATH>/log:/mosquitto/log --restart always -d eclipse-mosquitto:2.0.12 --network iot_network
 ```
 
 Linux version:
 
 ```bash
-docker run --name=my-mosquitto-broker -p 1883:1883 -v ${PWD}/mosquitto.conf:/mosquitto/config/mosquitto.conf -v ${PWD}/data:/mosquitto/data -v ${PWD}/log:/mosquitto/log --restart always -d eclipse-mosquitto:2.0.12
+docker run --name=my-mosquitto-broker --network iot_network -p 1883:1883 -v ${PWD}/mosquitto.conf:/mosquitto/config/mosquitto.conf -v ${PWD}/data:/mosquitto/data -v ${PWD}/log:/mosquitto/log --restart always -d eclipse-mosquitto:2.0.12
 ```
 
 ### Stop & Remove
@@ -46,10 +68,11 @@ docker stop my-mosquitto-broker
 docker rm my-mosquitto-broker
 ```
 
-## Python - IoT Inventory - Demo RESTful HTTP API
+## Python - IoT Inventory - RESTful HTTP API
 
 
-This section presents a demo implementation of a simple IoT device and location inventory through an HTTP RESTful API. It utilizes Flask and Flask RESTful.
+This section presents a demo implementation of a simple IoT device and location inventory through an HTTP RESTful API. 
+It utilizes Flask and Flask RESTful.
 
 ### Build & Run
 
@@ -63,16 +86,16 @@ docker build -t http_iot_inventory_api:0.1 .
 Run the container
 
 ```bash
-docker run --name=http-inventory-api -p 7070:7070 --restart always -d http_iot_inventory_api:0.1
+docker run --name=http-inventory-api --network iot_network -p 7070:7070 --restart always -d http_iot_inventory_api:0.1
 ```
 
 Run with a different configuration
 
 ```bash
-docker run --name=http-inventory-api -p 7070:7070 -v ${PWD}/test_conf.yaml:/app/conf.yaml --restart always -d http_iot_inventory_api:0.1
+docker run --name=http-inventory-api --network iot_network -p 7070:7070 -v ${PWD}/target_web_conf.yaml:/app/conf.yaml --restart always -d http_iot_inventory_api:0.1
 ```
 
-Stop and remove
+Stop and remove (at the end of the test)
 
 ```bash
 docker stop http-inventory-api
@@ -111,23 +134,83 @@ Build the container
 docker build -t mqtt_data_fetcher:0.1 .
 ```
 
-Run the container
+In this case we cannot run the container without the configuration file, so we need to mount it.
+The configuration specifies the MQTT broker IP, the MQTT broker port, the MQTT topic to subscribe to, and the HTTP Inventory API base URL.
+This configuration file is named fetcher_conf.yaml and uses internal Docker names for the services instead of IP addresses.
+
+Run the container with the target configuration file
 
 ```bash
-docker run --name=mqtt_data_fetcher --restart always -d mqtt_data_fetcher:0.1
+docker run --name=mqtt_data_fetcher --network iot_network -v ${PWD}/target_fetcher_conf.yaml:/app/fetcher_conf.yaml --restart always -d mqtt_data_fetcher:0.1
 ```
 
-Run the container with a different configuration file
-
-```bash
-docker run --name=mqtt_data_fetcher -v ${PWD}/test_fetcher_conf.yaml:/app/fetcher_conf.yaml --restart always -d mqtt_data_fetcher:0.1
-```
-
-Stop and remove
+Stop and remove (at the end of the test)
 
 ```bash
 docker stop mqtt_data_fetcher
 docker rm mqtt_data_fetcher
+```
+
+## Python - Web Interface
+
+This component provides the user interface for the system, allowing users to interact with the 
+application through a web browser. It displays location and device information through dedicated pages and tables.
+
+The implementation is based on the following Python Frameworks 
+
+- Flask: https://flask.palletsprojects.com/en/2.0.x/
+
+The web interface interacts with the IoT Inventory API to retrieve and display the information.
+The interaction is based on HTTP requests to the API endpoints.
+
+### Build & Run
+
+In order to build the container, move to the target folder
+
+```bash
+cd web-ui
+```
+
+Build the container
+
+```bash
+docker build -t web-ui:0.1 .
+```
+
+Run the target container with the following configuration file `target_web_conf.yaml` contains a the configuration for the web interface, 
+you can use it to overwrite the default configuration in the container.
+
+In particular the configuration contains the following parameters:
+
+```yaml
+web:
+  host: "0.0.0.0"
+  port: 7071
+  api_base_url: "http://http-inventory-api:7070/api/v1/iot/inventory"
+```
+
+This configuration file is used to set the base URL for the API endpoint, in this case the API is running on the same host as the web interface.
+**In this case since we have a dedicated network for the containers, we can use the container name as the hostname.**
+Otherwise, you can use the IP address of the host machine and change the configuration file accordingly at every deployment and/or
+change of the host machine IP address.
+
+```bash
+docker run --name=web-ui -p 7071:7071 -v <PATH_TO_FILE>/target_web_conf.yaml:/app/conf.yaml --restart always -d web-ui:0.1
+```
+
+On Linux System you can use the `${PWD}` command to automatically retrieve the path to the current local folder
+
+```bash
+docker run --name=web-ui -p 7071:7071 -v ${PWD}/target_web_conf.yaml:/app/conf.yaml --restart always -d web-ui:0.1
+```
+
+## Stop & Remove the Container
+
+Stop and remove (at the end of the test)
+
+```bash
+docker stop web-ui
+docker rm web-ui
 ```
 
 ## MQTT Temperature Sensor Example

@@ -1,4 +1,4 @@
-from application.core_manager import CoreManager
+import requests
 from flask import Flask, request, render_template
 import os
 import yaml
@@ -7,28 +7,26 @@ import threading
 
 class WebServer:
 
-    def __init__(self, config_file:str, core_manager: CoreManager):
+    def __init__(self, config_file:str):
 
         # Server Thread
         self.server_thread = None
-
-        # Save the data manager
-        self.core_manager = core_manager
 
         # Save the configuration file
         self.config_file = config_file
 
         # Get the main communication directory
-        main_app_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        main_app_path = ""
 
         # Construct the file path
-        template_dir = os.path.join(main_app_path, 'presentation')
+        template_dir = os.path.join(main_app_path, 'templates')
 
         # Set a default configuration
         self.configuration_dict = {
             "web": {
                 "host": "0.0.0.0",
-                "port": 7071
+                "port": 7071,
+                "api_base_url": "http://127.0.0.1:7070/api/v1/iot/inventory"
             }
         }
 
@@ -41,7 +39,6 @@ class WebServer:
         # Add URL rules to the Flask app mapping the URL to the function
         self.app.add_url_rule('/locations', 'locations', self.locations)
         self.app.add_url_rule('/location/<string:location_id>/devices', 'devices', self.devices)
-        self.app.add_url_rule('/location/<string:location_id>/device/<string:device_id>/telemetry', 'telemetry', self.telemetry)
 
     def read_configuration_file(self):
         """ Read Configuration File for the Web Server
@@ -49,7 +46,7 @@ class WebServer:
         """
 
         # Get the main communication directory
-        main_app_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        main_app_path = ""
 
         # Construct the file path
         file_path = os.path.join(main_app_path, self.config_file)
@@ -61,18 +58,40 @@ class WebServer:
 
     def locations(self):
         """ Get all locations and render the locations.html template"""
-        location_list = self.core_manager.get_all_locations()
+        location_list = self.http_get_location_list()
         return render_template('locations.html', locations=location_list)
+
+    def http_get_location_list(self):
+        """ Get all locations from the remote server over HTTP"""
+
+        # Get the base URL from the configuration
+        base_http_url = self.configuration_dict['web']['api_base_url']
+        target_url = f'{base_http_url}/location'
+
+        # Send the GET request
+        response_string = requests.get(target_url)
+
+        # Return the JSON response
+        return response_string.json()
 
     def devices(self, location_id):
         """ Get all devices for a specific location and render the devices.html template"""
-        device_list = self.core_manager.get_devices_by_location(location_id)
+        device_list = self.http_get_device_list(location_id)
         return render_template('devices.html', devices=device_list, location_id=location_id)
 
-    def telemetry(self, location_id, device_id):
-        """ Get telemetry data for a specific device and render the telemetry.html template"""
-        telemetry_data = self.core_manager.get_telemetry_data_by_device_id(device_id)
-        return render_template('telemetry.html', telemetry_data=telemetry_data, location_id=location_id, device_id=device_id)
+    def http_get_device_list(self, location_id):
+        """ Get all devices for the target location_id from the remote server over HTTP"""
+
+        # Get the base URL from the configuration
+        base_http_url = self.configuration_dict['web']['api_base_url']
+        target_url = f'{base_http_url}/location/{location_id}/device'
+
+        # Send the GET request
+        response_string = requests.get(target_url)
+
+        # Return the JSON response
+        return response_string.json()
+
 
     def run_server(self):
         """ Run the Flask Web Server"""

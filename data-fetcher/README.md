@@ -70,13 +70,13 @@ device_api_url: "http://192.168.1.113:7070/api/v1/iot/inventory/location/l0001/d
 You can pass the local file to overwrite the original on in the image container using the syntax `-v local_file_path:container_image_file_path` as follows:
 
 ```bash
-docker run --name=mqtt_data_fetcher -v <PATH_TO_FILE>/test_fetcher_conf.yaml:/app/fetcher_conf.yaml --restart always -d mqtt_data_fetcher:0.1
+docker run --name=mqtt_data_fetcher -v <PATH_TO_FILE>/target_fetcher_conf.yaml:/app/fetcher_conf.yaml --restart always -d mqtt_data_fetcher:0.1
 ```
 
 On Linux System you can use the `${PWD}` command to automatically retrieve the path to the current local folder
 
 ```bash
-docker run --name=mqtt_data_fetcher -v ${PWD}/test_fetcher_conf.yaml:/app/fetcher_conf.yaml --restart always -d mqtt_data_fetcher:0.1
+docker run --name=mqtt_data_fetcher -v ${PWD}/target_fetcher_conf.yaml:/app/fetcher_conf.yaml --restart always -d mqtt_data_fetcher:0.1
 ```
 
 ## Stop & Remove the Container
