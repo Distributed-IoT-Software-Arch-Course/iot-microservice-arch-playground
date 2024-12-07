@@ -1,8 +1,19 @@
-# IoT Integration with MQTT and HTTP Inventory
+# Microservices IoT Application with Docker - Playground
 
 The target use case demo and deployment with Docker will be the following: 
 
 ![schema_v2.jpg](images/schema_v2.jpg)
+
+The outline of the playground is the following:
+
+- [Create a Docker Network](#create-a-docker-network)
+- [MQTT Broker - Eclipse Mosquitto](#mqtt-broker---eclipse-mosquitto)
+- [Python - IoT Inventory - RESTful HTTP API](#python---iot-inventory---restful-http-api)
+- [MQTT Data Fetcher - MQTT to HTTP Inventory Integration](#mqtt-data-fetcher---mqtt-to-http-inventory-integration)
+- [Web UI - IoT Inventory Web Interface](#web-ui---iot-inventory-web-interface)
+- [MQTT Temperature Sensor Example](#mqtt-temperature-sensor-example)
+- [Run & Test the System](#run--test-the-system)
+- [Docker Compose](#docker-compose)
 
 ## Create a Docker Network
 
